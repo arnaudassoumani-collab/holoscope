@@ -1,21 +1,62 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  ObservatoryIcon,
+  AgentsIcon,
+  KnowledgeIcon,
+  ConstitutionIcon,
+  ADEIcon,
+  MetricsIcon,
+  CommandIcon,
+  HoloscopeIcon,
+  SocaIcon,
+} from "./icons";
+import type { LucideIcon } from "lucide-react";
 
-const panels = [
-  { id: "observatory", icon: "🌐", label: "Observatory", path: "/", shortcut: "⌘1" },
-  { id: "agents", icon: "🤖", label: "Agents", path: "/agents", shortcut: "⌘2" },
-  { id: "knowledge", icon: "🧠", label: "Knowledge", path: "/knowledge", shortcut: "⌘3" },
-  { id: "constitution", icon: "📜", label: "Constitution", path: "/constitution", shortcut: "⌘4" },
-  { id: "ade", icon: "💻", label: "ADE", path: "/ade", shortcut: "⌘5" },
-  { id: "metrics", icon: "📊", label: "Metrics", path: "/metrics", shortcut: "⌘6" },
+interface Panel {
+  id: string;
+  Icon: LucideIcon;
+  label: string;
+  path: string;
+  shortcut: string;
+  num: number;
+}
+
+const panels: Panel[] = [
+  { id: "observatory", Icon: ObservatoryIcon, label: "Observatory", path: "/", shortcut: "⌘1", num: 1 },
+  { id: "agents", Icon: AgentsIcon, label: "Agents", path: "/agents", shortcut: "⌘2", num: 2 },
+  { id: "knowledge", Icon: KnowledgeIcon, label: "Knowledge", path: "/knowledge", shortcut: "⌘3", num: 3 },
+  { id: "constitution", Icon: ConstitutionIcon, label: "Constitution", path: "/constitution", shortcut: "⌘4", num: 4 },
+  { id: "ade", Icon: ADEIcon, label: "ADE", path: "/ade", shortcut: "⌘5", num: 5 },
+  { id: "metrics", Icon: MetricsIcon, label: "Metrics", path: "/metrics", shortcut: "⌘6", num: 6 },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
+
+  const handleKeyboard = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey) {
+        const num = parseInt(e.key);
+        if (num >= 1 && num <= 6) {
+          e.preventDefault();
+          const panel = panels.find((p) => p.num === num);
+          if (panel) router.push(panel.path);
+        }
+      }
+    },
+    [router]
+  );
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyboard);
+    return () => window.removeEventListener("keydown", handleKeyboard);
+  }, [handleKeyboard]);
 
   return (
     <aside
@@ -30,7 +71,7 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="flex items-center justify-center h-14 border-b" style={{ borderColor: "var(--border-primary)" }}>
-        <span className="text-lg" title="HOLOSCOPE">🔭</span>
+        <HoloscopeIcon size={20} style={{ color: "var(--accent-cyan)" }} />
         {expanded && (
           <span className="ml-2 text-xs font-bold tracking-widest animate-fade-in" style={{ color: "var(--accent-cyan)" }}>
             HOLOSCOPE
@@ -53,7 +94,7 @@ export function Sidebar() {
               }`}
               title={`${panel.label} (${panel.shortcut})`}
             >
-              <span className="text-base w-6 text-center flex-shrink-0">{panel.icon}</span>
+              <panel.Icon size={16} className="flex-shrink-0" />
               {expanded && (
                 <span className="animate-fade-in whitespace-nowrap flex-1">{panel.label}</span>
               )}
@@ -67,7 +108,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Bottom — Command Palette trigger */}
+      {/* Bottom */}
       <div className="p-2 border-t" style={{ borderColor: "var(--border-primary)" }}>
         <button
           className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm w-full transition-all hover:bg-[var(--bg-hover)]"
@@ -75,13 +116,12 @@ export function Sidebar() {
           onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
           title="Command Palette (⌘K)"
         >
-          <span className="text-base w-6 text-center flex-shrink-0">⌘</span>
+          <CommandIcon size={14} className="flex-shrink-0" />
           {expanded && <span className="animate-fade-in text-xs">⌘K Search</span>}
         </button>
 
-        {/* SOCA stamp */}
         <div className="flex items-center justify-center mt-2 opacity-40">
-          <span className="text-xs">🌀</span>
+          <SocaIcon size={14} />
           {expanded && <span className="ml-1 text-[10px] animate-fade-in">SOCA</span>}
         </div>
       </div>
