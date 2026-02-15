@@ -52,6 +52,20 @@ On success, it writes a Mac-side receipt into:
   - Verify: recompute sha256 and write `__verified__...` receipt files.
   - View: open the artifact file content.
   - Diff: open a simple side-by-side diff and write `__diff_viewed__...` receipt files.
+- HIL Queue: reads pending requests from `$SOCA_OWNER_INBOX/.hil_queue/*.hil_request.json` and enforces:
+  - Approve is blocked unless Verified and Diff Viewed receipts exist.
+  - Approve and Reject are receipts (`__hil_approved__...`, `__hil_rejected__...`), not UI state.
+
+Minimal HIL request format:
+
+```json
+{
+  "id": "HIL-REQ-001",
+  "title": "Approve sample",
+  "pointerRel": "20260214_report_9a0a2db1015c.artifactpointer.json",
+  "diff": { "aRel": "20260214_report_9a0a2db1015c.md", "bRel": "other.md" }
+}
+```
 
 ## Tech
 
@@ -60,4 +74,3 @@ On success, it writes a Mac-side receipt into:
 - React
 - shadcn-ui
 - Tailwind CSS
-

@@ -281,3 +281,210 @@ export async function diffTextFiles(ownerInboxAbs: string, aRel: string, bRel: s
   return { aRel, bRel, aText, bText, receiptRel };
 }
 
+export type HilDiffPair = { aRel: string; bRel: string };
+
+export type HilQueueItem = {
+  id: string;
+  title: string;
+  requestRel: string;
+  pointerRel: string | null;
+  diff: HilDiffPair | null;
+  receipts: {
+    verified: boolean;
+    diffViewed: boolean;
+    hilApproved: boolean;
+    hilRejected: boolean;
+  };
+  gate: {
+    canApprove: boolean;
+    canReject: boolean;
+    missing: string[];
+  };
+  error: string | null;
+};
+
+function hasHilReceipt(receipts: Set<string>, kind: "hil_approved" | "hil_rejected", id: string) {
+  return Array.from(receipts).some((n) => n.includes(`__${kind}__${id}.`));
+}
+
+function hasDiffViewedForPair(receipts: Set<string>, aId: string, bId: string) {
+  return Array.from(receipts).some((n) => n.includes("__diff_viewed__") && n.includes(aId) && n.includes(bId));
+}
+
+function safeString(v: unknown): string | null {
+  return typeof v === "string" && v.trim() ? v : null;
+}
+
+function safeObject(v: unknown): Record<string, unknown> | null {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+  return v as Record<string, unknown>;
+}
+
+function artifactIdFromPointerRel(pointerRel: string): string {
+  return path.basename(pointerRel).replace(/\.artifactpointer\.json$/i, "");
+}
+
+export async function listHilQueue(ownerInboxAbs: string): Promise<HilQueueItem[]> {
+  const rootAbs = path.resolve(ownerInboxAbs);
+  if (!(await pathExists(rootAbs))) return [];
+
+  const receipts = await readReceiptsSet(rootAbs);
+  const queueDir = path.join(rootAbs, ".hil_queue");
+
+  let names: string[] = [];
+  try {
+    names = (await fs.readdir(queueDir)).filter((n) => n.endsWith(".hil_request.json"));
+    names.sort();
+  } catch {
+    return [];
+  }
+
+  const out: HilQueueItem[] = [];
+  for (const name of names) {
+    const requestRel = path.join(".hil_queue", name);
+    const abs = path.join(queueDir, name);
+    let id: string | null = null;
+    let title: string | null = null;
+    let pointerRel: string | null = null;
+    let diff: HilDiffPair | null = null;
+    let error: string | null = null;
+
+    try {
+      const raw = await fs.readFile(abs, "utf-8");
+      const obj = safeObject(JSON.parse(raw));
+      if (!obj) throw new Error("invalid json");
+
+      id = safeString(obj.id);
+      title = safeString(obj.title) ?? safeString(obj.name);
+      pointerRel = safeString(obj.pointerRel) ?? safeString(obj.pointer_rel);
+
+      const diffObj = safeObject(obj.diff);
+      if (diffObj) {
+        const aRel = safeString(diffObj.aRel) ?? safeString(diffObj.a_rel);
+        const bRel = safeString(diffObj.bRel) ?? safeString(diffObj.b_rel);
+        if (aRel && bRel) diff = { aRel, bRel };
+      }
+
+      if (!id) throw new Error("missing id");
+      if (!title) throw new Error("missing title");
+      if (!pointerRel) throw new Error("missing pointerRel");
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      error = message;
+    }
+
+    const safeId = id ?? name.replace(/\.hil_request\.json$/, "");
+    const hilApproved = hasHilReceipt(receipts, "hil_approved", safeId);
+    const hilRejected = hasHilReceipt(receipts, "hil_rejected", safeId);
+
+    let verified = false;
+    let diffViewed = false;
+    const missing: string[] = [];
+    if (!error && pointerRel) {
+      const artifactId = artifactIdFromPointerRel(pointerRel);
+      const r = receiptsForId(receipts, artifactId);
+      verified = r.verified;
+      if (!verified) missing.push("verified");
+
+      if (diff) {
+        const aId = path.basename(diff.aRel).replace(/\.[^.]+$/, "");
+        const bId = path.basename(diff.bRel).replace(/\.[^.]+$/, "");
+        diffViewed = hasDiffViewedForPair(receipts, aId, bId);
+      } else {
+        diffViewed = r.diffViewed;
+      }
+      if (!diffViewed) missing.push("diff_viewed");
+    }
+
+    const canApprove = !error && !hilApproved && !hilRejected && verified && diffViewed;
+    const canReject = !error && !hilApproved && !hilRejected;
+
+    out.push({
+      id: safeId,
+      title: title ?? safeId,
+      requestRel,
+      pointerRel,
+      diff,
+      receipts: { verified, diffViewed, hilApproved, hilRejected },
+      gate: { canApprove, canReject, missing },
+      error,
+    });
+  }
+
+  return out;
+}
+
+export async function approveHilRequest(
+  ownerInboxAbs: string,
+  requestRel: string,
+): Promise<{ ok: true; id: string; receiptRel: string } | { ok: false; error: string }> {
+  const rootAbs = path.resolve(ownerInboxAbs);
+  const abs = resolveUnderRoot(rootAbs, requestRel);
+  const raw = await fs.readFile(abs, "utf-8");
+  const obj = safeObject(JSON.parse(raw));
+  if (!obj) return { ok: false, error: "invalid json" };
+
+  const id = safeString(obj.id);
+  const title = safeString(obj.title) ?? safeString(obj.name);
+  const pointerRel = safeString(obj.pointerRel) ?? safeString(obj.pointer_rel);
+  if (!id || !title || !pointerRel) return { ok: false, error: "missing required fields: id/title/pointerRel" };
+
+  const receipts = await readReceiptsSet(rootAbs);
+  if (hasHilReceipt(receipts, "hil_approved", id) || hasHilReceipt(receipts, "hil_rejected", id)) {
+    return { ok: false, error: "already decided" };
+  }
+
+  const artifactId = artifactIdFromPointerRel(pointerRel);
+  const r = receiptsForId(receipts, artifactId);
+  const missing: string[] = [];
+  if (!r.verified) missing.push("verified");
+
+  let diffOk = r.diffViewed;
+  const diffObj = safeObject(obj.diff);
+  if (diffObj) {
+    const aRel = safeString(diffObj.aRel) ?? safeString(diffObj.a_rel);
+    const bRel = safeString(diffObj.bRel) ?? safeString(diffObj.b_rel);
+    if (aRel && bRel) {
+      const aId = path.basename(aRel).replace(/\.[^.]+$/, "");
+      const bId = path.basename(bRel).replace(/\.[^.]+$/, "");
+      diffOk = hasDiffViewedForPair(receipts, aId, bId);
+    }
+  }
+  if (!diffOk) missing.push("diff_viewed");
+
+  if (missing.length) return { ok: false, error: `missing receipts: ${missing.join(", ")}` };
+
+  const ts = utcStamp();
+  const receiptName = `${ts}__hil_approved__${id}.ok`;
+  const receiptContent = ["HIL_APPROVED_OK", `utc: ${ts}`, `id: ${id}`, `title: ${title}`, `pointer_rel: ${pointerRel}`, ""].join(
+    "\n",
+  );
+  const receiptRel = await writeReceipt(rootAbs, receiptName, receiptContent);
+  return { ok: true, id, receiptRel };
+}
+
+export async function rejectHilRequest(
+  ownerInboxAbs: string,
+  requestRel: string,
+): Promise<{ ok: true; id: string; receiptRel: string } | { ok: false; error: string }> {
+  const rootAbs = path.resolve(ownerInboxAbs);
+  const abs = resolveUnderRoot(rootAbs, requestRel);
+  const raw = await fs.readFile(abs, "utf-8");
+  const obj = safeObject(JSON.parse(raw));
+  if (!obj) return { ok: false, error: "invalid json" };
+
+  const id = safeString(obj.id);
+  const title = safeString(obj.title) ?? safeString(obj.name);
+  if (!id || !title) return { ok: false, error: "missing required fields: id/title" };
+
+  const receipts = await readReceiptsSet(rootAbs);
+  if (hasHilReceipt(receipts, "hil_approved", id) || hasHilReceipt(receipts, "hil_rejected", id)) {
+    return { ok: false, error: "already decided" };
+  }
+
+  const ts = utcStamp();
+  const receiptName = `${ts}__hil_rejected__${id}.ok`;
+  const receiptContent = ["HIL_REJECTED_OK", `utc: ${ts}`, `id: ${id}`, `title: ${title}`, ""].join("\n");
+  const receiptRel = await writeReceipt(rootAbs, receiptName, receiptContent);
+  return { ok: true, id, receiptRel };
+}

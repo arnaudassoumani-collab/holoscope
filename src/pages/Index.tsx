@@ -55,6 +55,26 @@ type DiffResult = {
   receiptRel: string;
 };
 
+type HilQueueItem = {
+  id: string;
+  title: string;
+  requestRel: string;
+  pointerRel: string | null;
+  diff: { aRel: string; bRel: string } | null;
+  receipts: {
+    verified: boolean;
+    diffViewed: boolean;
+    hilApproved: boolean;
+    hilRejected: boolean;
+  };
+  gate: {
+    canApprove: boolean;
+    canReject: boolean;
+    missing: string[];
+  };
+  error: string | null;
+};
+
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
   const text = await res.text();
@@ -84,6 +104,7 @@ function shortPath(p: string) {
 const Index = () => {
   const [config, setConfig] = useState<AdminConfig | null>(null);
   const [pointers, setPointers] = useState<ArtifactPointerEntry[]>([]);
+  const [hilItems, setHilItems] = useState<HilQueueItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -91,6 +112,7 @@ const Index = () => {
   const [diffDialog, setDiffDialog] = useState<DiffResult | null>(null);
 
   const [diffSelection, setDiffSelection] = useState<string[]>([]);
+  const [tab, setTab] = useState<string>("command");
 
   const loadAll = useCallback(async () => {
     setBusy(true);
@@ -100,6 +122,8 @@ const Index = () => {
       setConfig(cfg);
       const resp = await fetchJson<{ pointers: ArtifactPointerEntry[] }>("/api/inbox/pointers");
       setPointers(resp.pointers || []);
+      const hil = await fetchJson<{ items: HilQueueItem[] }>("/api/hil/queue");
+      setHilItems(hil.items || []);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -114,6 +138,14 @@ const Index = () => {
   const pointerCount = pointers.length;
   const verifiedCount = useMemo(() => pointers.filter((p) => p.receipts.verified).length, [pointers]);
   const diffViewedCount = useMemo(() => pointers.filter((p) => p.receipts.diffViewed).length, [pointers]);
+  const pendingHilCount = useMemo(
+    () => hilItems.filter((h) => !h.error && !h.receipts.hilApproved && !h.receipts.hilRejected).length,
+    [hilItems],
+  );
+
+  useEffect(() => {
+    if (pendingHilCount > 0 && tab === "command") setTab("hil");
+  }, [pendingHilCount, tab]);
 
   const toggleDiffSel = (rel: string) => {
     setDiffSelection((prev) => {
@@ -176,6 +208,58 @@ const Index = () => {
     }
   };
 
+  const openDiffPair = async (aRel: string, bRel: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const data = await fetchJson<DiffResult>("/api/inbox/diff", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ aRel, bRel }),
+      });
+      setDiffDialog(data);
+      await loadAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const approveHil = async (requestRel: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await fetchJson<{ ok: boolean }>("/api/hil/approve", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ requestRel }),
+      });
+      await loadAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const rejectHil = async (requestRel: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await fetchJson<{ ok: boolean }>("/api/hil/reject", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ requestRel }),
+      });
+      await loadAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const diffRows = useMemo(() => {
     if (!diffDialog) return [];
     const aLines = diffDialog.aText.split("\n");
@@ -224,14 +308,21 @@ const Index = () => {
           </Alert>
         ) : null}
 
-        <Tabs defaultValue="command" className="space-y-4">
+        <Tabs value={tab} onValueChange={setTab} className="space-y-4">
           <TabsList className="bg-muted flex-wrap h-auto">
             <TabsTrigger value="command">Command Center</TabsTrigger>
             <TabsTrigger value="runs">Runs And Evidence</TabsTrigger>
+            <TabsTrigger value="hil">{pendingHilCount > 0 ? `HIL Queue (${pendingHilCount})` : "HIL Queue"}</TabsTrigger>
             <TabsTrigger value="admin">Admin</TabsTrigger>
           </TabsList>
 
           <TabsContent value="command" className="space-y-4">
+            {pendingHilCount > 0 ? (
+              <Alert variant="destructive">
+                <AlertTitle>HIL Pending</AlertTitle>
+                <AlertDescription>There are pending items in the HIL queue. Review and approve or reject before promoting changes.</AlertDescription>
+              </Alert>
+            ) : null}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <Card>
                 <CardHeader>
@@ -261,6 +352,10 @@ const Index = () => {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Diff Viewed</span>
                     <span className="font-mono">{diffViewedCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">HIL Pending</span>
+                    <span className="font-mono">{pendingHilCount}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -348,6 +443,105 @@ const Index = () => {
                     ) : null}
                   </tbody>
                 </table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="hil" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>HIL Queue</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm">
+                {hilItems.length === 0 ? (
+                  <div className="text-muted-foreground">No HIL requests found.</div>
+                ) : (
+                  <div className="space-y-4">
+                    {hilItems.map((h) => (
+                      <div key={h.requestRel} className="rounded-md border border-border p-4 space-y-2">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="font-semibold">{h.title}</div>
+                            <div className="font-mono text-xs text-muted-foreground">{h.id}</div>
+                            <div className="font-mono text-xs text-muted-foreground">{h.requestRel}</div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => h.pointerRel && verifyOne(h.pointerRel)}
+                              disabled={busy || !h.pointerRel || Boolean(h.error)}
+                            >
+                              Verify
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => h.diff && openDiffPair(h.diff.aRel, h.diff.bRel)}
+                              disabled={busy || !h.diff || Boolean(h.error)}
+                            >
+                              Review Diff
+                            </Button>
+                            <Button size="sm" onClick={() => approveHil(h.requestRel)} disabled={busy || !h.gate.canApprove}>
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => rejectHil(h.requestRel)}
+                              disabled={busy || !h.gate.canReject}
+                            >
+                              Reject
+                            </Button>
+                          </div>
+                        </div>
+
+                        {h.error ? (
+                          <Alert variant="destructive">
+                            <AlertTitle>Invalid HIL Request</AlertTitle>
+                            <AlertDescription className="font-mono">{h.error}</AlertDescription>
+                          </Alert>
+                        ) : null}
+
+                        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 text-xs">
+                          <div>
+                            <span className="text-muted-foreground">Verified</span>{" "}
+                            <span className="font-mono text-foreground">{h.receipts.verified ? "yes" : "no"}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Diff Viewed</span>{" "}
+                            <span className="font-mono text-foreground">{h.receipts.diffViewed ? "yes" : "no"}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Approved</span>{" "}
+                            <span className="font-mono text-foreground">{h.receipts.hilApproved ? "yes" : "no"}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Rejected</span>{" "}
+                            <span className="font-mono text-foreground">{h.receipts.hilRejected ? "yes" : "no"}</span>
+                          </div>
+                        </div>
+
+                        {h.gate.missing.length ? (
+                          <div className="text-xs text-muted-foreground">
+                            Missing receipts for approval: <span className="font-mono">{h.gate.missing.join(", ")}</span>
+                          </div>
+                        ) : null}
+
+                        {h.pointerRel ? (
+                          <div className="text-xs text-muted-foreground">
+                            Pointer: <span className="font-mono">{h.pointerRel}</span>
+                          </div>
+                        ) : null}
+                        {h.diff ? (
+                          <div className="text-xs text-muted-foreground">
+                            Diff: <span className="font-mono">{h.diff.aRel}</span> vs <span className="font-mono">{h.diff.bRel}</span>
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

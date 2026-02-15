@@ -4,11 +4,14 @@ import path from "node:path";
 import { componentTagger } from "lovable-tagger";
 import {
   DEFAULT_OWNER_INBOX,
+  approveHilRequest,
   diffTextFiles,
   getOwnerInboxPath,
   listArtifactPointers,
+  listHilQueue,
   pathExists,
   readTextFile,
+  rejectHilRequest,
   verifyArtifactPointer,
 } from "./src/server/inbox";
 
@@ -72,6 +75,28 @@ function holoscopeLocalApi(): import("vite").Plugin {
         if (!body.aRel || !body.bRel) return json(res, 400, { error: "aRel and bRel required" });
         const result = await diffTextFiles(ownerInbox, body.aRel, body.bRel);
         return json(res, 200, { ownerInbox, ...result });
+      }
+
+      if (u.pathname === "/api/hil/queue" && req.method === "GET") {
+        const ownerInbox = getOwnerInboxPath(process.env);
+        const items = await listHilQueue(ownerInbox);
+        return json(res, 200, { ownerInbox, items });
+      }
+
+      if (u.pathname === "/api/hil/approve" && req.method === "POST") {
+        const ownerInbox = getOwnerInboxPath(process.env);
+        const body = (await readJsonBody(req)) as { requestRel?: string };
+        if (!body.requestRel) return json(res, 400, { error: "requestRel required" });
+        const result = await approveHilRequest(ownerInbox, body.requestRel);
+        return json(res, result.ok ? 200 : 409, { ownerInbox, ...result });
+      }
+
+      if (u.pathname === "/api/hil/reject" && req.method === "POST") {
+        const ownerInbox = getOwnerInboxPath(process.env);
+        const body = (await readJsonBody(req)) as { requestRel?: string };
+        if (!body.requestRel) return json(res, 400, { error: "requestRel required" });
+        const result = await rejectHilRequest(ownerInbox, body.requestRel);
+        return json(res, result.ok ? 200 : 409, { ownerInbox, ...result });
       }
 
       return next();
