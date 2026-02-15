@@ -1,48 +1,73 @@
-# 🌀 SOCAKit
+# Welcome to your Lovable project
 
-> **SOCA Holobiont OS — Unified Dashboard**
-> One app. Full visibility. Zero drift.
+## Project info
 
-## What is SOCAKit?
+**URL**: https://lovable.dev/projects/89b63ca6-4b2c-47cb-8141-9577bad773c8
 
-SOCAKit is the unified observatory, control center, and lightweight IDE for the SOCA HOLOBIONT OS ecosystem. Built with Tauri 2 + SvelteKit 5 for minimal resource usage and maximum capability.
+## How can I edit this code?
 
-### 6 Core Panels
+There are several ways of editing your application.
 
-| Panel | Purpose |
-|-------|---------|
-| 🌐 **System Observatory** | Bird's-eye health of Docker, VPS, Tailscale, GitHub |
-| 🤖 **Agent Control** | Launch, monitor, manage AI agents (kanban + live stream) |
-| 🧠 **Knowledge Graph** | 3D visualization of Obsidian + Neo4j knowledge |
-| 📜 **Constitution** | Live compliance view of 67 Sacred Rules |
-| 💻 **ADE** | Lightweight Agent Development Environment |
-| 📊 **Metrics** | Cost tracking, performance, timeline analytics |
+**Use Lovable**
 
-### Tech Stack
+Simply visit the [Lovable Project](https://lovable.dev/projects/89b63ca6-4b2c-47cb-8141-9577bad773c8) and start prompting.
 
-- **Tauri 2** — Rust backend, ~6MB binary, 10× lighter than Electron
-- **SvelteKit 5** — Fastest reactive framework, no VDOM
-- **Skeleton UI + Tailwind CSS 4** — Dark-mode-first
-- **3d-force-graph** — Interactive knowledge visualization
-- **CodeMirror 6** — Lightweight code editor
-- **xterm.js** — Embedded terminal
+Changes made via Lovable will be committed automatically to this repo.
 
-### Design Principles
+**Use your preferred IDE**
 
-- ⌘K everything (command palette)
-- Zero-click info (health visible immediately)
-- 1-click actions (launch, switch, open)
-- Keyboard-first (every panel navigable)
-- <100MB installed, <200MB RAM idle
-- ZHV 100% — only show verified data
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-## Part of SOCA HOLOBIONT OS
+The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-Built by the ASI ARCH team using the Perfect Stack:
-- 🧠 Opus 4.6 (architecture, design)
-- 🏗️ MiniMax M2.5 (coding, specs)
-- 🐜 Free tier (tests, CI)
+Follow these steps:
 
----
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
 
-*"Vers l'infini et l'au-delà!" 🚀*
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
+
+# Step 3: Install the necessary dependencies.
+npm i
+
+# Step 4: Start the development server with auto-reloading and an instant preview.
+npm run dev
+```
+
+**Edit a file directly in GitHub**
+
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
+
+**Use GitHub Codespaces**
+
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
+
+## What technologies are used for this project?
+
+This project is built with:
+
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
+
+## How can I deploy this project?
+
+Simply open [Lovable](https://lovable.dev/projects/89b63ca6-4b2c-47cb-8141-9577bad773c8) and click on Share -> Publish.
+
+## Can I connect a custom domain to my Lovable project?
+
+Yes, you can!
+
+To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+
+Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)

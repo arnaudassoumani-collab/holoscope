@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Lake Tahoe Inspired - Sober, Aesthetic, Modern */
+    --background: 222 60% 6%;        /* Deep blue-black */
+    --foreground: 210 40% 98%;       /* Almost white */
+    --card: 220 40% 11%;             /* Surface layer */
+    --card-foreground: 210 40% 98%;
+    --popover: 222 60% 6%;
+    --popover-foreground: 210 40% 98%;
+    
+    /* Primary - Sober Cyan */
+    --primary: 187 85% 38%;          /* Darker, more sober cyan */
+    --primary-foreground: 210 40% 98%;
+    
+    /* Secondary - Rich Purple */
+    --secondary: 258 73% 58%;        /* Rich purple (not neon) */
+    --secondary-foreground: 210 40% 98%;
+    
+    /* Accent - Warm Gold (was amber) */
+    --accent: 28 92% 45%;            /* Warm gold */
+    --accent-foreground: 222 60% 6%;
+    
+    /* Muted */
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 55%;
+    
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    
+    /* Progressive Status Colors - 6 Levels */
+    --status-excellent: 158 64% 52%; /* Green - 90-100% */
+    --status-good: 82 84% 55%;       /* Lime - 70-90% */
+    --status-fair: 48 96% 53%;       /* Yellow - 50-70% */
+    --status-concerning: 25 95% 53%; /* Orange - 30-50% */
+    --status-warning: 0 84% 60%;     /* Red - 10-30% */
+    --status-critical: 0 72% 51%;    /* Dark red - <10% */
+    
+    /* Success (legacy) */
+    --success: 158 64% 52%;
+    --warning: 48 96% 53%;
+    
+    /* Borders - Gold accent */
+    --border: 217 33% 17%;
+    --border-gold: 28 92% 45%;       /* Gold borders */
+    --input: 217 33% 17%;
+    --ring: 28 92% 45%;              /* Gold focus ring */
+    
+    /* Glass Morphism (Lake Tahoe translucency) */
+    --glass-bg: 220 40% 11% / 0.8;
+    --glass-border: 28 92% 45% / 0.3;
+    
+    /* Surface Colors */
+    --surface: 220 35% 15%;          /* Elevated cards */
+    --elevated: 220 30% 19%;         /* More elevated */
+    
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
