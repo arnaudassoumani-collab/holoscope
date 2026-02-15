@@ -1,58 +1,59 @@
-# Welcome to your Lovable project
+# HOLOSCOPE
 
-## Project info
+Local evidence review UI for SOCA owner inbox artifacts.
 
-**URL**: https://lovable.dev/projects/89b63ca6-4b2c-47cb-8141-9577bad773c8
+## Quickstart (soca_inbox workspace)
 
-## How can I edit this code?
+Recommended layout:
 
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/89b63ca6-4b2c-47cb-8141-9577bad773c8) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+mkdir -p /Users/arnaudassoumani/soca_inbox/{apps,review,logs}
+mkdir -p /Users/arnaudassoumani/soca_inbox/review/owner_review
 ```
 
-**Edit a file directly in GitHub**
+Pull artifacts from VPS outbox into the owner inbox (example):
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+rsync -avz soca-vps:/opt/soca/outbox/owner_review/ /Users/arnaudassoumani/soca_inbox/review/owner_review/
+```
 
-**Use GitHub Codespaces**
+Run the UI:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```bash
+cd /Users/arnaudassoumani/soca_inbox/apps/holoscope
+./run_local.sh
+```
 
-## What technologies are used for this project?
+## Configuration
 
-This project is built with:
+`SOCA_OWNER_INBOX` (optional): Absolute path to the owner inbox directory. Default is:
+
+`/Users/arnaudassoumani/soca_inbox/review/owner_review`
+
+The UI shows the resolved path in Admin and marks it missing if the directory does not exist.
+
+## GREEN Check
+
+Run the deterministic GREEN pack (repo + inbox governance gates + npm lint/test/build):
+
+```bash
+export SOCA_OWNER_INBOX="/Users/arnaudassoumani/soca_inbox/review/owner_review"
+./scripts/green_check.sh
+```
+
+On success, it writes a Mac-side receipt into:
+
+`$SOCA_OWNER_INBOX/.receipts/<UTC>__owner_green.ok`
+
+## What The UI Provides
+
+- Admin: shows current owner inbox path and existence check.
+- Runs And Evidence: lists `*.artifactpointer.json` bundles and supports:
+  - Verify: recompute sha256 and write `__verified__...` receipt files.
+  - View: open the artifact file content.
+  - Diff: open a simple side-by-side diff and write `__diff_viewed__...` receipt files.
+
+## Tech
 
 - Vite
 - TypeScript
@@ -60,14 +61,3 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/89b63ca6-4b2c-47cb-8141-9577bad773c8) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
