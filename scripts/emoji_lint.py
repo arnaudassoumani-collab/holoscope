@@ -14,12 +14,15 @@ SPECIALS = {0x200D, 0xFE0F}  # ZWJ, VS16
 IGNORE_DIRS = {
     ".git",
     ".next",
+    ".playwright",
     ".svelte-kit",
     ".turbo",
     "build",
     "coverage",
     "dist",
     "node_modules",
+    "playwright-report",
+    "test-results",
 }
 
 

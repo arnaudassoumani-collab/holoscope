@@ -282,7 +282,7 @@ const Index = () => {
             <h1 className="text-3xl font-bold text-foreground">HOLOSCOPE</h1>
             <p className="text-sm text-muted-foreground">
               Local evidence review UI. Owner inbox:{" "}
-              <span className="font-mono text-foreground">
+              <span className="font-mono text-foreground" data-testid="header-owner-inbox">
                 {config ? shortPath(config.ownerInbox) : "loading"}
               </span>
             </p>
@@ -310,15 +310,23 @@ const Index = () => {
 
         <Tabs value={tab} onValueChange={setTab} className="space-y-4">
           <TabsList className="bg-muted flex-wrap h-auto">
-            <TabsTrigger value="command">Command Center</TabsTrigger>
-            <TabsTrigger value="runs">Runs And Evidence</TabsTrigger>
-            <TabsTrigger value="hil">{pendingHilCount > 0 ? `HIL Queue (${pendingHilCount})` : "HIL Queue"}</TabsTrigger>
-            <TabsTrigger value="admin">Admin</TabsTrigger>
+            <TabsTrigger value="command" data-testid="tab-command">
+              Command Center
+            </TabsTrigger>
+            <TabsTrigger value="runs" data-testid="tab-runs">
+              Runs And Evidence
+            </TabsTrigger>
+            <TabsTrigger value="hil" data-testid="tab-hil">
+              {pendingHilCount > 0 ? `HIL Queue (${pendingHilCount})` : "HIL Queue"}
+            </TabsTrigger>
+            <TabsTrigger value="admin" data-testid="tab-admin">
+              Admin
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="command" className="space-y-4">
             {pendingHilCount > 0 ? (
-              <Alert variant="destructive">
+              <Alert variant="destructive" data-testid="command-hil-pending">
                 <AlertTitle>HIL Pending</AlertTitle>
                 <AlertDescription>There are pending items in the HIL queue. Review and approve or reject before promoting changes.</AlertDescription>
               </Alert>
@@ -376,10 +384,20 @@ const Index = () => {
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Artifact Pointers</CardTitle>
                 <div className="flex gap-2">
-                  <Button variant="secondary" onClick={openDiff} disabled={busy || !canDiff}>
+                  <Button
+                    variant="secondary"
+                    onClick={openDiff}
+                    disabled={busy || !canDiff}
+                    data-testid="runs-open-diff"
+                  >
                     Open Diff
                   </Button>
-                  <Button variant="secondary" onClick={() => setDiffSelection([])} disabled={busy || diffSelection.length === 0}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setDiffSelection([])}
+                    disabled={busy || diffSelection.length === 0}
+                    data-testid="runs-clear-selection"
+                  >
                     Clear Selection
                   </Button>
                 </div>
@@ -402,23 +420,34 @@ const Index = () => {
                       const selectable = Boolean(p.siblingRel);
                       const sel = p.siblingRel ? diffSelection.includes(p.siblingRel) : false;
                       return (
-                        <tr key={p.pointerRel} className="border-t border-border">
+                        <tr key={p.pointerRel} className="border-t border-border" data-testid={`pointer-row-${p.id}`}>
                           <td className="py-2 pr-2 align-top">
                             <input
                               type="checkbox"
                               disabled={!selectable}
                               checked={sel}
                               onChange={() => p.siblingRel && toggleDiffSel(p.siblingRel)}
+                              data-testid={`pointer-diffsel-${p.id}`}
                             />
                           </td>
                           <td className="py-2 pr-2 font-mono align-top">{p.id}</td>
-                          <td className="py-2 pr-2 font-mono align-top">{p.receipts.verified ? "yes" : "no"}</td>
-                          <td className="py-2 pr-2 font-mono align-top">{p.receipts.diffViewed ? "yes" : "no"}</td>
+                          <td className="py-2 pr-2 font-mono align-top" data-testid={`pointer-verified-${p.id}`}>
+                            {p.receipts.verified ? "yes" : "no"}
+                          </td>
+                          <td className="py-2 pr-2 font-mono align-top" data-testid={`pointer-diffviewed-${p.id}`}>
+                            {p.receipts.diffViewed ? "yes" : "no"}
+                          </td>
                           <td className="py-2 pr-2 font-mono align-top">{p.pointerRel}</td>
                           <td className="py-2 pr-2 font-mono align-top">{p.siblingRel ?? "missing"}</td>
                           <td className="py-2 pr-2 align-top">
                             <div className="flex flex-wrap gap-2">
-                              <Button size="sm" variant="secondary" onClick={() => verifyOne(p.pointerRel)} disabled={busy}>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => verifyOne(p.pointerRel)}
+                                disabled={busy}
+                                data-testid={`pointer-verify-${p.id}`}
+                              >
                                 Verify
                               </Button>
                               <Button
@@ -426,6 +455,7 @@ const Index = () => {
                                 variant="secondary"
                                 onClick={() => p.siblingRel && openFile(p.siblingRel)}
                                 disabled={busy || !p.siblingRel}
+                                data-testid={`pointer-view-${p.id}`}
                               >
                                 View
                               </Button>
@@ -458,7 +488,11 @@ const Index = () => {
                 ) : (
                   <div className="space-y-4">
                     {hilItems.map((h) => (
-                      <div key={h.requestRel} className="rounded-md border border-border p-4 space-y-2">
+                      <div
+                        key={h.requestRel}
+                        className="rounded-md border border-border p-4 space-y-2"
+                        data-testid={`hil-item-${h.id}`}
+                      >
                         <div className="flex items-start justify-between gap-4">
                           <div className="space-y-1">
                             <div className="font-semibold">{h.title}</div>
@@ -471,6 +505,7 @@ const Index = () => {
                               variant="secondary"
                               onClick={() => h.pointerRel && verifyOne(h.pointerRel)}
                               disabled={busy || !h.pointerRel || Boolean(h.error)}
+                              data-testid={`hil-verify-${h.id}`}
                             >
                               Verify
                             </Button>
@@ -479,10 +514,16 @@ const Index = () => {
                               variant="secondary"
                               onClick={() => h.diff && openDiffPair(h.diff.aRel, h.diff.bRel)}
                               disabled={busy || !h.diff || Boolean(h.error)}
+                              data-testid={`hil-review-diff-${h.id}`}
                             >
                               Review Diff
                             </Button>
-                            <Button size="sm" onClick={() => approveHil(h.requestRel)} disabled={busy || !h.gate.canApprove}>
+                            <Button
+                              size="sm"
+                              onClick={() => approveHil(h.requestRel)}
+                              disabled={busy || !h.gate.canApprove}
+                              data-testid={`hil-approve-${h.id}`}
+                            >
                               Approve
                             </Button>
                             <Button
@@ -490,6 +531,7 @@ const Index = () => {
                               variant="destructive"
                               onClick={() => rejectHil(h.requestRel)}
                               disabled={busy || !h.gate.canReject}
+                              data-testid={`hil-reject-${h.id}`}
                             >
                               Reject
                             </Button>
@@ -506,24 +548,32 @@ const Index = () => {
                         <div className="grid grid-cols-2 gap-2 md:grid-cols-4 text-xs">
                           <div>
                             <span className="text-muted-foreground">Verified</span>{" "}
-                            <span className="font-mono text-foreground">{h.receipts.verified ? "yes" : "no"}</span>
+                            <span className="font-mono text-foreground" data-testid={`hil-status-verified-${h.id}`}>
+                              {h.receipts.verified ? "yes" : "no"}
+                            </span>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Diff Viewed</span>{" "}
-                            <span className="font-mono text-foreground">{h.receipts.diffViewed ? "yes" : "no"}</span>
+                            <span className="font-mono text-foreground" data-testid={`hil-status-diffviewed-${h.id}`}>
+                              {h.receipts.diffViewed ? "yes" : "no"}
+                            </span>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Approved</span>{" "}
-                            <span className="font-mono text-foreground">{h.receipts.hilApproved ? "yes" : "no"}</span>
+                            <span className="font-mono text-foreground" data-testid={`hil-status-approved-${h.id}`}>
+                              {h.receipts.hilApproved ? "yes" : "no"}
+                            </span>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Rejected</span>{" "}
-                            <span className="font-mono text-foreground">{h.receipts.hilRejected ? "yes" : "no"}</span>
+                            <span className="font-mono text-foreground" data-testid={`hil-status-rejected-${h.id}`}>
+                              {h.receipts.hilRejected ? "yes" : "no"}
+                            </span>
                           </div>
                         </div>
 
                         {h.gate.missing.length ? (
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-xs text-muted-foreground" data-testid={`hil-missing-${h.id}`}>
                             Missing receipts for approval: <span className="font-mono">{h.gate.missing.join(", ")}</span>
                           </div>
                         ) : null}
@@ -554,9 +604,14 @@ const Index = () => {
               <CardContent className="space-y-2 text-sm">
                 <div className="flex flex-col gap-1">
                   <span className="text-muted-foreground">SOCA_OWNER_INBOX</span>
-                  <span className="font-mono">{config?.ownerInbox ?? "loading"}</span>
+                  <span className="font-mono" data-testid="admin-owner-inbox-path">
+                    {config?.ownerInbox ?? "loading"}
+                  </span>
                   <span className="text-muted-foreground">
-                    Exists: <span className="font-mono text-foreground">{config?.ownerInboxExists ? "yes" : "no"}</span>
+                    Exists:{" "}
+                    <span className="font-mono text-foreground" data-testid="admin-owner-inbox-exists">
+                      {config?.ownerInboxExists ? "yes" : "no"}
+                    </span>
                   </span>
                 </div>
                 <div className="pt-2 text-muted-foreground">
@@ -570,25 +625,33 @@ const Index = () => {
       </div>
 
       <Dialog open={Boolean(fileDialog)} onOpenChange={(open) => !open && setFileDialog(null)}>
-        <DialogContent className="max-w-[1100px]">
+        <DialogContent className="max-w-[1100px]" data-testid="file-dialog">
           <DialogHeader>
-            <DialogTitle className="font-mono text-sm">{fileDialog?.title ?? ""}</DialogTitle>
+            <DialogTitle className="font-mono text-sm" data-testid="file-dialog-title">
+              {fileDialog?.title ?? ""}
+            </DialogTitle>
           </DialogHeader>
-          <pre className="max-h-[70vh] overflow-auto rounded-md border border-border bg-muted p-4 font-mono text-xs whitespace-pre-wrap">
+          <pre
+            className="max-h-[70vh] overflow-auto rounded-md border border-border bg-muted p-4 font-mono text-xs whitespace-pre-wrap"
+            data-testid="file-dialog-content"
+          >
             {fileDialog?.text ?? ""}
           </pre>
         </DialogContent>
       </Dialog>
 
       <Dialog open={Boolean(diffDialog)} onOpenChange={(open) => !open && setDiffDialog(null)}>
-        <DialogContent className="max-w-[1300px]">
+        <DialogContent className="max-w-[1300px]" data-testid="diff-dialog">
           <DialogHeader>
-            <DialogTitle className="font-mono text-sm">
+            <DialogTitle className="font-mono text-sm" data-testid="diff-dialog-title">
               Diff: {diffDialog?.aRel ?? ""} vs {diffDialog?.bRel ?? ""}
             </DialogTitle>
           </DialogHeader>
           <div className="text-xs text-muted-foreground">
-            Receipt: <span className="font-mono text-foreground">{diffDialog?.receiptRel ?? ""}</span>
+            Receipt:{" "}
+            <span className="font-mono text-foreground" data-testid="diff-dialog-receipt">
+              {diffDialog?.receiptRel ?? ""}
+            </span>
           </div>
           <div className="max-h-[70vh] overflow-auto rounded-md border border-border">
             <table className="w-full text-xs font-mono">

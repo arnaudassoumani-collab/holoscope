@@ -1,7 +1,8 @@
-import { defineConfig, type Connect } from "vite";
+import type { Connect } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "node:path";
 import { componentTagger } from "lovable-tagger";
+import { configDefaults, defineConfig } from "vitest/config";
 import {
   DEFAULT_OWNER_INBOX,
   approveHilRequest,
@@ -122,6 +123,9 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "127.0.0.1",
     port: 5173,
+  },
+  test: {
+    exclude: [...configDefaults.exclude, "**/e2e/**", "**/playwright-report/**", "**/test-results/**"],
   },
   plugins: [react(), holoscopeLocalApi(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
